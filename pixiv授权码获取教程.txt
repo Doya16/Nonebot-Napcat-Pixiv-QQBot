@@ -1,0 +1,51 @@
+第一步：运行授权脚本
+在终端中执行以下命令：
+python pixiv_auth.py login
+此命令会自动打开一个 Pixiv 的登录网页。
+
+第二步：浏览器中进行操作
+打开 DevTools（开发者工具）
+快捷键：Chrome/Edge: F12 或 Ctrl+Shift+I
+进入 Network（网络） 标签页
+✅ 开启网络持久记录 Network
+勾选上 Preserve log（保留日志）
+✅ 设置过滤器
+在网络栏上方的搜索框中输入：allback?
+用于过滤只显示重定向请求。
+
+🔑 第三步：登录 Pixiv 账号
+在打开的网页中正常登录你的 Pixiv 账号。建议用邮箱+密码登录，不推荐使用外部账户（如 Twitter 登录）。
+成功登录后，会跳转到一个白屏页面，并在 DevTools 网络记录中出现一个这样的 URL 请求：
+https://app-api.pixiv.net/web/v1/users/auth/pixiv/callback?state=xxx&code=XXXXXXX
+
+📋 第四步：复制 code 参数
+在该请求的完整 URL 中找到 code 参数的值：
+code=XXXXXXX
+只复制 code= 后面的那一段内容（通常是几十个字符，可能到末尾会有&表示结束，要留意）。
+
+⌨️ 第五步：返回终端输入 code
+将刚刚复制的 code 粘贴到脚本提示的 code: 输入框中，回车：
+code: xxxxxxxx
+如果成功，你会看到如下返回内容：
+access_token: XXXXXXXXXXXXXXXXXXXXXXXXXXXX
+refresh_token: XXXXXXXXXXXXXXXXXXXXXXXXXXXX
+expires_in: 3600
+
+📦 第六步：保存 token（可选但推荐）
+推荐将 refresh_token 写入环境变量或配置文件，避免明文硬编码。
+
+======================================================
+方法1：写入plugins文件
+打开 pixiv_plugin.py
+找到REFRESH_TOKEN = "这里填入你的Pixiv Login后的access code"
+复制粘贴保存后启动
+
+方法 2：写入 .env 文件
+在项目根目录下的 .env 文件，添加一行：
+PIXIV_REFRESH_TOKEN=你的 refresh_token
+然后启动代码中读取：
+import os
+REFRESH_TOKEN = os.getenv("PIXIV_REFRESH_TOKEN")
+
+方法 3：写入 JSON 或 config.py 文件
+根据项目习惯配置即可，关键是别把 token 写死在插件脚本里。

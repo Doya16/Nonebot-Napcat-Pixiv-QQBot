@@ -100,6 +100,8 @@ REFRESH_TOKEN = os.getenv("PIXIV_REFRESH_TOKEN")
 | `.pixiv r 遐蝶 3` | 获取关键词“遐蝶”的插图 3 张 |
 | `.pixiv r 遐蝶 week 2` | 获取“遐蝶”在周榜中的插图 |
 | `.pixiv r month` | 获取月榜随机插图 |
+| `.pixiv hot 遐蝶` |获取关键词“遐蝶”的最热门插图 1 张（默认）|
+| `.pixiv hot 遐蝶 3` |获取关键词“遐蝶”的最热门插图 3 张 |
 
 ### `.pixiv u` 👤 获取用户作品
 

@@ -102,7 +102,7 @@ MIT License
 
 - [NoneBot2](https://github.com/nonebot/nonebot2)：现代 Python 异步聊天机器人框架
 - [PixivPy](https://github.com/upbit/pixivpy)：Pixiv 非官方 API 封装库
-- [Napcat](https://github.com/kaedejun/Napcat)：轻量化、易部署的 QQ 机器人框架
+- [Napcat]([https://github.com/kaedejun/Napcat](https://github.com/NapNeko/NapCatQQ))：轻量化、易部署的 QQ 机器人框架
 - [httpx](https://www.python-httpx.org/)：现代化异步 HTTP 客户端
 - 本插件由 [@Doya16](https://github.com/Doya16) 开发和维护
 

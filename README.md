@@ -65,4 +65,32 @@ readme_full_text = """
    ```bash
       import os
       REFRESH_TOKEN = os.getenv("PIXIV_REFRESH_TOKEN")
-  
+   ```
+
+  ### `.pixiv r` 获取插图
+
+| 命令 | 功能说明 |
+|------|----------|
+| `.pixiv r` | 获取 Pixiv 日榜中 1 张图（默认） |
+| `.pixiv r 遐蝶 3` | 获取关键词“遐蝶”的插图 3 张 |
+| `.pixiv r 遐蝶 week 2` | 获取“遐蝶”在周榜中的插图 |
+| `.pixiv r month` | 获取月榜随机插图 |
+
+### `.pixiv u` 获取用户作品
+
+| 命令 | 功能说明 |
+|------|----------|
+| `.pixiv u Nhimm` | 获取用户 Nhimm 的最新作品 |
+| `.pixiv u Nhimm random 2` | 随机获取 Nhimm 的 2 张作品 |
+| `.pixiv u Nhimm latest 3` | 获取最新 3 张作品 |
+
+## 其他说明
+
+- 插图下载目录：`cache/pixiv_download/`
+- 临时发送目录：`NAPCAT_TEMP_DIR`（需手动设置路径）
+- 插图发送后将在群聊中 60 秒自动撤回
+- 插件自动跳过敏感内容（关键词过滤）
+
+## 开源协议
+
+MIT License

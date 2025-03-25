@@ -51,19 +51,18 @@ readme_full_text = """
 
   ## 方法一：直接在插件中设置（简单但不推荐）
   在 pixiv_plugin.py 文件中找到：
-    
-    ```bash
-    REFRESH_TOKEN = "你的 refresh_token"
+  
+       ```bash
+       REFRESH_TOKEN = "你的 refresh_token"
 
-  ## 方法二：使用 .env 文件（推荐）
+## 方法二：使用 .env 文件（推荐）
   在项目根目录创建 .env 文件并添加内容：
   
-    ```bash
+   ```bash
     PIXIV_REFRESH_TOKEN=你的 refresh_token
-
-  并在代码中引用：
-  
-      ```bash
+   ```
+并在代码中引用：  
+   ```bash
       import os
       REFRESH_TOKEN = os.getenv("PIXIV_REFRESH_TOKEN")
   

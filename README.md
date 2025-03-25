@@ -31,7 +31,8 @@
    ```
 
 3. 📂 将 `pixiv_plugin.py` 注册为 NoneBot 插件，或整理为标准插件目录。
-      📁 NoneBot 支持自动注册，可以直接将`pixiv_plugin.py` 放入plugins 文件夹启用。
+
+📁 NoneBot 支持自动注册，可以直接将`pixiv_plugin.py` 放入plugins 文件夹启用。
 
 ---
 

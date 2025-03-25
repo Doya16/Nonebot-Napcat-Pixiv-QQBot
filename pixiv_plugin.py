@@ -3,10 +3,8 @@ import time
 import shutil
 import random
 import asyncio
-import uuid
 import httpx
 
-from nonebot import on_message
 from nonebot.adapters.onebot.v11 import Bot, MessageEvent, MessageSegment
 from nonebot.exception import FinishedException
 from pixivpy3 import AppPixivAPI
@@ -17,6 +15,8 @@ from nonebot.adapters.onebot.v11 import Message
 
 from nonebot import on_message
 from nonebot.adapters.onebot.v11 import Bot, MessageEvent
+import uuid
+from nonebot.adapters.onebot.v11 import GroupMessageEvent
 
 def pixiv_help_rule(event: MessageEvent) -> bool:
     return event.get_plaintext().strip().lower() == ".pixiv help"
@@ -29,6 +29,12 @@ async def handle_pixiv_help(bot: Bot, event: MessageEvent):
         "🎨 Pixiv 插图指令帮助\n\n"
 
         "📥 插图获取示例(支持默认、day、week、month)：\n"
+        ".pixiv hot 遐蝶\n"
+        "↑ 获取 Pixiv 最热门关键词为“遐蝶”的1张图（默认）\n\n"
+        
+        ".pixiv hot 遐蝶 3\n"
+        "↑ 获取 Pixiv 最热门关键词为“遐蝶”的3张图\n\n"
+        
         ".pixiv r\n"
         "↑ 获取 Pixiv 日榜中1张图（默认）\n\n"
 
@@ -60,18 +66,13 @@ async def handle_pixiv_help(bot: Bot, event: MessageEvent):
     )
     await bot.send(event=event, message=help_text)
 
-
-
-
-
-
-
 # 配置项
-REFRESH_TOKEN = "这里填入你的Pixiv Login后的access code"
-COOLDOWN_SECONDS = 20
-CACHE_DIR = os.path.join(os.path.dirname(__file__), "cache", "pixiv_download")
+REFRESH_TOKEN = "r4lOlQ3hTi0X-vzv8y5sY-DzCbJCIpQ-tHffNRM2DJc"   # 你的pixiv refresh code
+COOLDOWN_SECONDS = 20   # 用户请求该插件的冷却时间（单位：秒）
+RECALL_SECONDS = 60  # 撤回时间（单位：秒）
+CACHE_DIR = os.path.join(os.path.dirname(__file__), "cache", "pixiv_download")  # 缓存文件路径，你的plugins文件夹内需要存在一个路径 /plugins/cache/pixiv_download
 os.makedirs(CACHE_DIR, exist_ok=True)
-NAPCAT_TEMP_DIR = r"D:\QQFiles\NapCat\temp"  # 修改为你本地的临时发送路径
+NAPCAT_TEMP_DIR = r"D:\QQFiles\NapCat\temp"  # 修改为你Napcat本地的临时发送路径
 
 # 初始化 Pixiv API
 api = AppPixivAPI()
@@ -229,18 +230,47 @@ async def handle_pixiv_user(bot: Bot, event: MessageEvent, text: str):
         await bot.send(event=event, message=f"❌ 获取失败：{e}")
 
 
+def pixiv_hot_rule(event: MessageEvent) -> bool:
+    return event.get_plaintext().strip().lower().startswith(".pixiv hot")
+
+pixiv_hot = on_message(rule=pixiv_hot_rule, priority=1, block=True)
+
+@pixiv_hot.handle()
+async def handle_pixiv_hot(bot: Bot, event: MessageEvent):
+    text = event.get_plaintext().strip()
+    parts = text.split()
+    if len(parts) < 3:
+        await bot.send(event=event, message="❗ 格式错误，应为 `.pixiv hot [关键词] [数量]`")
+        return
+
+    tag = parts[2]
+    try:
+        num = int(parts[3]) if len(parts) > 3 else 1
+        num = max(1, min(num, 10))
+    except ValueError:
+        await bot.send(event=event, message="❗ 数量参数无效，应为数字")
+        return
+
+    try:
+        res = api.search_illust(tag, search_target="partial_match_for_tags", sort="popular_desc")
+        illusts = [i for i in res.illusts if not is_sensitive(i)]
+        if not illusts:
+            await bot.send(event=event, message="⚠️ 未找到热门插图。")
+            return
+
+
+        selected = random.sample(illusts, min(num, len(illusts)))
+        await send_images(bot, event, str(event.user_id), selected)
+    except Exception as e:
+        await bot.send(event=event, message=f"❌ 热门插图获取失败：{e}")
+
 
 # 图片下载与发送
-import uuid
-from nonebot.adapters.onebot.v11 import GroupMessageEvent
-
-RECALL_SECONDS = 60  # 撤回时间（秒）
-
 async def send_images(bot: Bot, event: MessageEvent, user_id: str, illusts: list):
     user_dir = os.path.join(CACHE_DIR, user_id)
     os.makedirs(user_dir, exist_ok=True)
 
-    max_retry = 10
+    max_retry = 5
     retry_delay = 1
     sent_temp_paths = []  # 记录已复制到 NapCat 的路径
 
@@ -333,8 +363,6 @@ async def send_images(bot: Bot, event: MessageEvent, user_id: str, illusts: list
 
     await asyncio.sleep(1)
     shutil.rmtree(user_dir, ignore_errors=True)
-
-
 
 # 过滤敏感图片
 def is_sensitive(illust) -> bool:

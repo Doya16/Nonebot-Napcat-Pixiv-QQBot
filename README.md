@@ -3,7 +3,7 @@
 readme_full_text = """
 # 🎨 Nonebot-Napcat-pixivAPI 插件
 
-基于 [NoneBot2](https://v2.nonebot.dev/) 和 [Napcat](https://github.com/kaedejun/Napcat) 的 Pixiv 插图获取插件。  
+基于 [NoneBot2](https://v2.nonebot.dev/) 和 [Napcat]([https://github.com/kaedejun/Napcat](https://github.com/NapNeko/NapCatQQ)) 的 Pixiv 插图获取插件。  
 支持通过 QQ 聊天命令获取 Pixiv 热门插画、关键词搜索、用户插图，并带有图片过滤和定时撤回等功能。
 
 # 一、 功能特性
@@ -94,3 +94,15 @@ readme_full_text = """
 ## 开源协议
 
 MIT License
+
+
+## 致谢
+
+本项目受以下优秀开源项目启发并构建：
+
+- [NoneBot2](https://github.com/nonebot/nonebot2)：现代 Python 异步聊天机器人框架
+- [PixivPy](https://github.com/upbit/pixivpy)：Pixiv 非官方 API 封装库
+- [Napcat](https://github.com/kaedejun/Napcat)：轻量化、易部署的 QQ 机器人框架
+- [httpx](https://www.python-httpx.org/)：现代化异步 HTTP 客户端
+- 本插件由 [@Doya16](https://github.com/Doya16) 开发和维护
+

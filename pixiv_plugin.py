@@ -67,12 +67,12 @@ async def handle_pixiv_help(bot: Bot, event: MessageEvent):
     await bot.send(event=event, message=help_text)
 
 # 配置项
-REFRESH_TOKEN = "r4lOlQ3hTi0X-vzv8y5sY-DzCbJCIpQ-tHffNRM2DJc"   # 你的pixiv refresh code
+REFRESH_TOKEN = "your_token"   # 你的pixiv refresh code
 COOLDOWN_SECONDS = 20   # 用户请求该插件的冷却时间（单位：秒）
 RECALL_SECONDS = 60  # 撤回时间（单位：秒）
 CACHE_DIR = os.path.join(os.path.dirname(__file__), "cache", "pixiv_download")  # 缓存文件路径，你的plugins文件夹内需要存在一个路径 /plugins/cache/pixiv_download
 os.makedirs(CACHE_DIR, exist_ok=True)
-NAPCAT_TEMP_DIR = r"D:\QQFiles\NapCat\temp"  # 修改为你Napcat本地的临时发送路径
+NAPCAT_TEMP_DIR = r"your_QQ_NapCat_temp  # 修改为你Napcat本地的临时发送路径
 
 # 初始化 Pixiv API
 api = AppPixivAPI()
@@ -80,6 +80,25 @@ api.auth(refresh_token=REFRESH_TOKEN)
 
 # 冷却记录
 cooldowns = {}
+
+import asyncio
+from nonebot import get_driver
+
+async def refresh_access_token():
+    while True:
+        await asyncio.sleep(30 * 60)  # 每 30 分钟刷新一次
+        try:
+            api.auth(refresh_token=REFRESH_TOKEN)
+            print("Access token refreshed successfully.")
+        except Exception as e:
+            print(f"刷新 access token 失败: {e}")
+
+driver = get_driver()
+
+@driver.on_startup
+async def on_startup():
+    asyncio.create_task(refresh_access_token())
+
 
 # 自定义触发器
 def pixiv_rule(event: MessageEvent) -> bool:
@@ -253,18 +272,24 @@ async def handle_pixiv_hot(bot: Bot, event: MessageEvent):
 
     try:
         res = api.search_illust(tag, search_target="partial_match_for_tags", sort="popular_desc")
-        illusts = [i for i in res.illusts if not is_sensitive(i)]
+        illusts = []
+        if res and getattr(res, "illusts", None):
+            illusts = [i for i in res.illusts if not is_sensitive(i)]
+        else:
+            print(f"[Pixiv插件] ⚠️ 热门插图 API 返回为空：{res}")
+
         if not illusts:
             await bot.send(event=event, message="⚠️ 未找到热门插图。")
             return
 
-
         selected = random.sample(illusts, min(num, len(illusts)))
         await send_images(bot, event, str(event.user_id), selected)
     except Exception as e:
+        print(f"[Pixiv插件] ❌ 热门插图获取异常：{e}")
         await bot.send(event=event, message=f"❌ 热门插图获取失败：{e}")
 
 
+# 图片下载与发送
 # 图片下载与发送
 async def send_images(bot: Bot, event: MessageEvent, user_id: str, illusts: list):
     user_dir = os.path.join(CACHE_DIR, user_id)
@@ -280,11 +305,24 @@ async def send_images(bot: Bot, event: MessageEvent, user_id: str, illusts: list
 
         async with httpx.AsyncClient() as client:
             for illust in illusts:
-                if illust.meta_single_page.get("original_image_url"):
-                    url = illust.meta_single_page["original_image_url"]
-                elif illust.meta_pages and len(illust.meta_pages) > 0:
+                # 更健壮的图像链接获取逻辑（支持原图、多页图、降级图）
+                url = (
+                    illust.meta_single_page.get("original_image_url")
+                    if illust.meta_single_page else None
+                )
+
+                if not url and illust.meta_pages:
                     url = illust.meta_pages[0].image_urls.get("original")
-                else:
+
+                if not url and illust.image_urls:
+                    url = (
+                        illust.image_urls.get("original")
+                        or illust.image_urls.get("large")
+                        or illust.image_urls.get("medium")
+                    )
+
+                if not url:
+                    print(f"[Pixiv插件] ⚠️ 插图 {illust.id} 无可用图片链接，已跳过。")
                     continue
 
                 try:
@@ -364,22 +402,25 @@ async def send_images(bot: Bot, event: MessageEvent, user_id: str, illusts: list
     await asyncio.sleep(1)
     shutil.rmtree(user_dir, ignore_errors=True)
 
+
 # 过滤敏感图片
 def is_sensitive(illust) -> bool:
-    if illust.x_restrict == 1 or illust.sanity_level >= 6:
+    if illust.sanity_level >= 6:
         return True
 
     sensitive_tags = {
-        "R-18", "r18", "r-18", "R18", "r-18g", "r18g",
-        "裸", "裸体", "露出", "性器", "色情", "sex", "中出", "精液",
+        # "R-18", "r18", "r-18", "R18", "r-18g", "r18g",
+        # "裸", "裸体", "露出", "性器", "色情", "sex", "中出", "精液",
         "肢体切断", "重口", "兽交", "血腥", "血", "gore",
         "流血", "血腥", "肢体切断", "猎奇", "重口", "内脏", "分尸",
         "残肢", "暴力", "病娇", "SM", "拷问", "刑具",
-        "guro", "断肢","全裸", "半裸", "露出", "性器", "乳头", "下体",
-        "露奶", "露臀", "内衣", "开裆",  "手淫", "自慰",
+        "guro", "断肢",
+        # "全裸", "半裸", "露出", "性器", "乳头", "下体",
+        # "露奶", "露臀", "内衣", "开裆",  "手淫", "自慰",
         "兽交", "异种奸", "触手", "怪物娘", "兽人", "非人", "異種姦",
         "催眠", "洗脑", "药物", "猥亵", "非自愿", "偷拍",
-        "黑丝", "脚", "恋物癖", "恋尸癖", "尸体","AI生成"
+        "黑丝", "脚", "恋物癖", "恋尸癖", "尸体",
+        # "AI生成"
         "虫子", "昆虫娘", "寄生", "便器", "排泄", "孕"
     }
 

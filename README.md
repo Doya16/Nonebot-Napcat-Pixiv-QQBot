@@ -1,139 +1,149 @@
 # 🎨 Nonebot-Napcat-pixivAPI 插件
 
-基于 [NoneBot2](https://v2.nonebot.dev/) 和 [Napcat](https://github.com/NapNeko/NapCatQQ) 的 Pixiv 插图获取插件。  
-支持通过 QQ 聊天命令获取 Pixiv 热门插画、关键词搜索、用户插图，并带有图片过滤和定时撤回等功能。
+基于 [NoneBot2](https://v2.nonebot.dev/) 和 [Napcat](https://github.com/NapNeko/NapCatQQ) 的 Pixiv 插图获取插件。
+支持 QQ 群聊 / 私聊中获取 Pixiv 插图，支持热榜、关键词搜索、用户作品、ID 查询、R-18 内容等。
 
 ---
 
 # 🧩 一、功能特性
 
-- 🔍 支持关键词搜索和 Pixiv 排行榜（日/周/月）
-- 👤 支持指定用户插图获取（支持随机或最新模式）
-- 🚫 自动过滤 R-18 / 血腥 / 暴力 等敏感内容
-- 💾 插图自动缓存并使用 Napcat 临时目录发送
-- 🕒 支持自动撤回（默认 60 秒，仅群聊）
-- 🧊 每人请求冷却时间限制（默认 20 秒）
+- 支持 Pixiv 排行榜（日 / 周 / 月）插图获取
+- 支持关键词插图搜索（含普通与热门图池）
+- 支持指定用户作品（latest / random 模式）
+- 支持通过 ID 查询插图
+- 私聊支持获取 R-18 插图
+- 插图缓存至本地并经 Napcat 临时路径中转
+- 自动过滤暴力、血腥等敏感内容
+- 群聊支持自动撤回（默认 60 秒），私聊 30 秒
+- 全局冷却时间限制（默认 60 秒）
 
 ---
 
-# ⚙️ 二、安装方式
+# 🧭 二、群聊版 vs 私聊版
 
-1. 🧬 克隆本仓库：
-
-   ```bash
-   git clone https://github.com/Doya16/Nonebot-Napcat-pixivAPI.git
-   ```
-
-2. 🛠️ 安装依赖：
-
-   ```bash
-   pip install pixivpy3 httpx
-   ```
-
-3. 📂 将 `pixiv_plugin.py` 注册为 NoneBot 插件，或整理为标准插件目录。
-
-📁 NoneBot 支持自动注册，可以直接将`pixiv_plugin.py` 放入plugins 文件夹启用。
+| 功能           | 群聊版本 `pixiv_plugin.py` | 私聊版本 `pixiv_plugin_private.py` |
+|----------------|-----------------------------|-------------------------------------|
+| 插图获取       | ✅ 支持 `.pixiv r/u/id/hot` | ✅ 全支持                           |
+| R-18 插图      | ❌ 不支持                   | ✅ 支持 `.pixiv r18` 指令           |
+| 敏感过滤       | ✅ 启用                     | ✅ 启用但允许 R-18 指令              |
+| 自动撤回       | ✅ 默认 60 秒               | ✅ 默认 30 秒                        |
+| 冷却限制       | ✅ 每用户 60 秒             | ✅ 每用户 60 秒                      |
+| 多图支持       | ✅ 最多 6 张                 | ✅ 最多 6 张                         |
 
 ---
 
-# 🔐 三、Pixiv Refresh Token 获取方法
+# ⚙️ 三、安装方式
 
-插件需要 Pixiv 的 `refresh_token` 进行认证。
-
-## ⚡ 快速获取步骤：
-
-1. 🚀 运行授权脚本：
-
-   ```bash
-   python pixiv_auth.py login
-   ```
-
-2. 🌐 浏览器登录 Pixiv 后，在开发者工具 Network 中搜索 `callback?`，找到 URL 中的 `code=XXXXXX`
-
-3. ✂️ 将 `code` 粘贴回终端，即可获得：
-
-   ```bash
-   access_token: XXXXXXXXXX
-   refresh_token: XXXXXXXXXX
-   ```
-
-📘 详细图文步骤请参阅 `pixiv授权码获取教程.txt`。
-
----
-
-# 🛡️ 四、Refresh Token 配置方式
-
-你可以选择以下任意一种方式配置 token：
-
-### 📝 方法一：直接在插件中设置（简单但不推荐）
-
-在 `pixiv_plugin.py` 文件中找到：
-
-```python
-REFRESH_TOKEN = "你的 refresh_token"
+```bash
+git clone https://github.com/Doya16/Nonebot-Napcat-pixivAPI.git
+pip install -r requirements.txt
+# 或手动安装
+pip install pixivpy3 httpx
 ```
 
-### 📁 方法二：使用 .env 文件（推荐）
+- 群聊版插件：`plugins/pixiv_plugin.py`
+- 私聊版插件：`plugins/pixiv_plugin_private.py`
 
-在项目根目录创建 `.env` 文件并添加内容：
+确保 Napcat 正常运行，并正确配置其临时图片目录。
 
-```env
-PIXIV_REFRESH_TOKEN=你的 refresh_token
+---
+
+# 🔐 四、Pixiv Token 获取
+
+1. 运行授权脚本：
+```bash
+python pixiv_auth.py login
 ```
 
-并在代码中引用：
+2. 登录 Pixiv 后，在浏览器开发者工具中找到 `code=XXXXXX`，复制
 
-```python
-import os
-REFRESH_TOKEN = os.getenv("PIXIV_REFRESH_TOKEN")
+3. 粘贴回终端，获取 `refresh_token` 和 `access_token`
+
+---
+
+# 📁 五、Token 配置
+
+### 推荐方式：`.env` 文件
+
+```
+PIXIV_REFRESH_TOKEN=你的refresh_token
 ```
 
----
+插件将使用 `refresh_token` 自动获取 `access_token` 并保存到：
 
-# 💬 五、指令说明
+```
+plugins/cache/pixiv_token.json
+```
 
-### `.pixiv r` 📥 获取插图
-
-| 🧾 命令 | 🧠 功能说明 |
-|--------|------------|
-| `.pixiv r` | 获取 Pixiv 日榜中 1 张图（默认） |
-| `.pixiv r 遐蝶 3` | 获取关键词“遐蝶”的插图 3 张 |
-| `.pixiv r 遐蝶 week 2` | 获取“遐蝶”在周榜中的插图 |
-| `.pixiv r month` | 获取月榜随机插图 |
-| `.pixiv hot 遐蝶` |获取关键词“遐蝶”的最热门插图 1 张（默认）|
-| `.pixiv hot 遐蝶 3` |获取关键词“遐蝶”的最热门插图 3 张 |
-
-### `.pixiv u` 👤 获取用户作品
-
-| 🧾 命令 | 🧠 功能说明 |
-|--------|------------|
-| `.pixiv u Nhimm` | 获取用户 Nhimm 的最新作品 |
-| `.pixiv u Nhimm random 2` | 随机获取 Nhimm 的 2 张作品 |
-| `.pixiv u Nhimm latest 3` | 获取最新 3 张作品 |
+群聊与私聊插件将自动读取该文件。
 
 ---
 
-# 📌 六、其他说明
+# 💬 六、全部命令一览
 
-- 📁 插图下载目录：`cache/pixiv_download/`
-- 📤 临时发送目录：`NAPCAT_TEMP_DIR`（需手动设置路径）
-- ⏱️ 插图发送后将在群聊中 60 秒自动撤回
-- 🧽 插件自动跳过敏感内容（关键词过滤）
+## 📥 插图获取（群聊 + 私聊）
+
+| 命令 | 说明 |
+|------|------|
+| `.pixiv r` | 获取 Pixiv 日榜图 |
+| `.pixiv r [关键词] [数量]` | 搜索插图（默认 latest） |
+| `.pixiv r [关键词] [day/week/month] [数量]` | 搜索榜图 |
+| `.pixiv r [day/week/month] [数量]` | 获取榜单随机图 |
+
+## 🔥 热门插图
+
+| 命令 | 说明 |
+|------|------|
+| `.pixiv hot [关键词] [数量]` | 获取热门插图 |
+
+## 👤 用户插图
+
+| 命令 | 说明 |
+|------|------|
+| `.pixiv u [用户名]` | 获取该用户最新插图 |
+| `.pixiv u [用户名] random/latest [数量]` | 指定模式 + 数量 |
+
+## 🆔 插图ID
+
+| 命令 | 说明 |
+|------|------|
+| `.pixiv id [作品ID]` | 通过 Pixiv 作品 ID 获取插图 |
+
+## 🔞 私聊专属
+
+| 命令 | 说明 |
+|------|------|
+| `.pixiv r18 [关键词] [数量]` | 获取 R-18 插图 |
+| `.pixiv r18 [关键词] [day/week/month] [数量]` | 获取榜单中 R-18 插图 |
 
 ---
 
-# 🪪 七、开源协议
+# 📂 七、路径说明
 
-📝 MIT License
+- 插图缓存：`plugins/cache/pixiv_download/`
+- access_token 保存：`plugins/cache/pixiv_token.json`
+- 临时发送目录（需手动配置）：`NAPCAT_TEMP_DIR = "你的 Napcat 路径"`
 
 ---
 
-# 🙏 八、致谢
+# ⏱️ 八、冷却与撤回说明
 
-本项目受以下优秀开源项目启发并构建：
+- 每位用户请求冷却时间：`60秒`（群聊/私聊一致）
+- 插图发送后自动撤回：`群聊 60 秒 / 私聊 30 秒`
 
-- ⭐ [NoneBot2](https://github.com/nonebot/nonebot2)：现代 Python 异步聊天机器人框架  
-- 🖼️ [PixivPy](https://github.com/upbit/pixivpy)：Pixiv 非官方 API 封装库  
-- 🐱 [Napcat](https://github.com/NapNeko/NapCatQQ)：轻量化、易部署的 QQ 机器人框架  
-- 🌐 [httpx](https://www.python-httpx.org/)：现代化异步 HTTP 客户端  
-- 👨‍💻 本插件由 [@Doya16](https://github.com/Doya16) 开发和维护
+---
+
+# 🪪 九、开源协议
+
+MIT License
+
+---
+
+# 🙏 十、致谢
+
+- [NoneBot2](https://github.com/nonebot/nonebot2)
+- [PixivPy](https://github.com/upbit/pixivpy)
+- [Napcat](https://github.com/NapNeko/NapCatQQ)
+- [httpx](https://www.python-httpx.org/)
+
+插件由 [@Doya16](https://github.com/Doya16) 开发维护

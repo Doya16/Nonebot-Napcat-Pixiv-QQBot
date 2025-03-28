@@ -11,7 +11,7 @@ from nonebot import on_message, get_driver
 from nonebot.adapters.onebot.v11 import Bot, MessageEvent, MessageSegment, PrivateMessageEvent
 from pixivpy3 import AppPixivAPI
 
-# 配置
+# ===== 配置 =====
 PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
 TOKEN_PATH = os.path.join(PLUGIN_DIR, "cache", "pixiv_token.json")
 CACHE_DIR = os.path.join(PLUGIN_DIR, "cache", "pixiv_download")
@@ -23,7 +23,7 @@ cooldowns = {}
 
 os.makedirs(CACHE_DIR, exist_ok=True)
 
-# access_token 读取
+# ===== access_token 读取 =====
 def get_access_token():
     if not os.path.exists(TOKEN_PATH):
         print("[私聊插件] ❌ 暂未找到 access_token 文件")
@@ -36,14 +36,14 @@ def get_access_token():
         print(f"[私聊插件] ❌ 读取 access_token 失败: {e}")
         return None
 
-# Pixiv API 初始化
+# ===== Pixiv API 初始化 =====
 api = AppPixivAPI()
 access_token = get_access_token()
 if access_token:
     api.access_token = access_token
     print("[私聊插件] ✅ access_token 加载成功")
 
-# 通用冷却检查函数
+# ===== 通用冷却检查函数 =====
 async def check_cooldown(bot: Bot, event: MessageEvent) -> bool:
     uid = str(event.user_id)
     now = time.time()
@@ -54,7 +54,13 @@ async def check_cooldown(bot: Bot, event: MessageEvent) -> bool:
     cooldowns[uid] = now
     return True
 
-# 帮助指令
+def refresh_token_from_file():
+    token = get_access_token()
+    if token:
+        api.access_token = token
+
+
+# ===== 帮助指令 =====
 def help_rule(event: MessageEvent):
     return event.get_plaintext().strip().lower() == ".pixiv help"
 
@@ -79,7 +85,7 @@ async def _(bot: Bot, event: MessageEvent):
         "\n已开启 R-18 显示，但不支持多图发送。"
     ))
 
-# .pixiv id
+# ===== .pixiv id =====
 def id_rule(event: MessageEvent):
     return event.get_plaintext().strip().lower().startswith(".pixiv id")
 
@@ -90,6 +96,7 @@ pixiv_id = on_message(rule=id_private_rule, priority=1, block=True)
 
 @pixiv_id.handle()
 async def _(bot: Bot, event: MessageEvent):
+    refresh_token_from_file()
     if not await check_cooldown(bot, event):
         return
     text = event.get_plaintext().strip()
@@ -107,7 +114,7 @@ async def _(bot: Bot, event: MessageEvent):
     except Exception as e:
         await bot.send(event, f"❌ 获取失败: {e}")
 
-# .pixiv r18
+# ===== .pixiv r18 =====
 def r18_rule(event: MessageEvent):
     return event.get_plaintext().strip().lower().startswith(".pixiv r18")
 
@@ -118,6 +125,7 @@ pixiv_r18 = on_message(rule=r18_private_rule, priority=1, block=True)
 
 @pixiv_r18.handle()
 async def _(bot: Bot, event: MessageEvent):
+    refresh_token_from_file()
     if not await check_cooldown(bot, event):
         return
 
@@ -165,7 +173,7 @@ async def _(bot: Bot, event: MessageEvent):
     except Exception as e:
         await bot.send(event, f"❌ 获取 R-18 插图失败：{e}")
 
-# 图片下载与发送（含自动撤回）
+# ===== 图片下载与发送（含自动撤回） =====
 async def send_images(bot: Bot, event: MessageEvent, illusts: list):
     user_dir = os.path.join(CACHE_DIR, str(event.user_id))
     os.makedirs(user_dir, exist_ok=True)
@@ -260,6 +268,7 @@ pixiv_r = on_message(rule=pixiv_r_rule, priority=1, block=True)
 
 @pixiv_r.handle()
 async def _(bot: Bot, event: MessageEvent):
+    refresh_token_from_file()
     if not await check_cooldown(bot, event):
         return
 
@@ -317,6 +326,7 @@ pixiv_u = on_message(rule=pixiv_u_rule, priority=1, block=True)
 
 @pixiv_u.handle()
 async def _(bot: Bot, event: MessageEvent):
+    refresh_token_from_file()
     if not await check_cooldown(bot, event):
         return
 
@@ -374,6 +384,7 @@ pixiv_hot = on_message(rule=pixiv_hot_rule, priority=1, block=True)
 
 @pixiv_hot.handle()
 async def _(bot: Bot, event: MessageEvent):
+    refresh_token_from_file()
     if not await check_cooldown(bot, event):
         return
 
@@ -403,3 +414,4 @@ async def _(bot: Bot, event: MessageEvent):
 
     except Exception as e:
         await bot.send(event, f"❌ 获取热门插图失败：{e}")
+

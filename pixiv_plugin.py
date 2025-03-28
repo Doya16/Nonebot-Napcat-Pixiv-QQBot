@@ -114,7 +114,7 @@ async def handle_pixiv_help(bot: Bot, event: MessageEvent):
     await bot.send(event=event, message=help_text)
 
 # 配置项
-REFRESH_TOKEN = "你的pixiv refresh code"   # 你的pixiv refresh code
+REFRESH_TOKEN = "r4lOlQ3hTi0X-vzv8y5sY-DzCbJCIpQ-tHffNRM2DJc"   # 你的pixiv refresh code
 COOLDOWN_SECONDS = 60   # 用户请求该插件的冷却时间（单位：秒）
 RECALL_SECONDS = 30  # 撤回时间（单位：秒）
 CACHE_DIR = os.path.join(os.path.dirname(__file__), "cache", "pixiv_download")  # 缓存文件路径，你的plugins文件夹内需要存在一个路径 /plugins/cache/pixiv_download
@@ -164,15 +164,6 @@ def save_access_token(token: str):
         print(f"[Pixiv插件] ❌ access_token 写入失败: {e}")
 
 
-
-def save_access_token(token: str):
-    try:
-        with open(TOKEN_PATH, "w", encoding="utf-8") as f:
-            json.dump({"access_token": token, "timestamp": int(time.time())}, f)
-    except Exception as e:
-        print(f"[Pixiv插件] ❌ access_token 写入失败: {e}")
-
-
 driver = get_driver()
 
 
@@ -184,6 +175,7 @@ async def on_startup():
         print("[Pixiv插件] ✅ 启动时 access_token 写入成功")
     except Exception as e:
         print(f"[Pixiv插件] ❌ 启动时刷新 token 失败: {e}")
+    asyncio.create_task(periodic_token_refresh())
 
 
 # 自定义触发器
@@ -528,4 +520,14 @@ def is_sensitive(illust) -> bool:
             print(f"[Pixiv插件] ⚠️ 标签解析异常: {e}")
 
     return not sensitive_tags.isdisjoint(tag_names)
+
+async def periodic_token_refresh():
+    while True:
+        try:
+            api.auth(refresh_token=REFRESH_TOKEN)
+            save_access_token(api.access_token)
+            print("[Pixiv插件] ♻️ 定时刷新 access_token 成功")
+        except Exception as e:
+            print(f"[Pixiv插件] ❌ 定时刷新失败: {e}")
+        await asyncio.sleep(25 * 60)  # 每 25 分钟刷新一次
 

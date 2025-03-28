@@ -19,9 +19,53 @@ import uuid
 from nonebot.adapters.onebot.v11 import GroupMessageEvent
 
 def pixiv_help_rule(event: MessageEvent) -> bool:
-    return event.get_plaintext().strip().lower() == ".pixiv help"
+    return isinstance(event, GroupMessageEvent) and event.get_plaintext().strip().lower() == ".pixiv help"
+
+
 
 pixiv_help = on_message(rule=pixiv_help_rule, priority=1, block=True)
+
+from nonebot.adapters.onebot.v11 import GroupMessageEvent
+
+def pixiv_id_rule(event: MessageEvent) -> bool:
+    if not isinstance(event, GroupMessageEvent):
+        return False
+    return event.get_plaintext().strip().lower().startswith(".pixiv id")
+
+
+pixiv_id = on_message(rule=pixiv_id_rule, priority=1, block=True)
+
+
+@pixiv_id.handle()
+async def handle_pixiv_id(bot: Bot, event: MessageEvent):
+    if not await check_cooldown(bot, event):
+        return
+    text = event.get_plaintext().strip()
+    parts = text.split()
+
+    if len(parts) < 3 or not parts[2].isdigit():
+        await bot.send(event=event, message="❗ 格式错误，应为 `.pixiv id [作品ID]`")
+        return
+
+    illust_id = int(parts[2])
+
+    try:
+        illust = api.illust_detail(illust_id).illust
+
+        if not illust:
+            await bot.send(event=event, message=f"⚠️ 未找到作品 ID 为 {illust_id} 的插图")
+            return
+
+        if is_sensitive(illust):
+            await bot.send(event=event, message="⚠️ 该作品被判断为敏感内容，已过滤")
+            return
+
+        await send_images(bot, event, str(event.user_id), [illust])
+
+    except Exception as e:
+        print(f"[Pixiv插件] ❌ 通过ID获取插图失败: {e}")
+        await bot.send(event=event, message=f"❌ 获取插图失败：{e}")
+
 
 @pixiv_help.handle()
 async def handle_pixiv_help(bot: Bot, event: MessageEvent):
@@ -34,6 +78,9 @@ async def handle_pixiv_help(bot: Bot, event: MessageEvent):
         
         ".pixiv hot 遐蝶 3\n"
         "↑ 获取 Pixiv 最热门关键词为“遐蝶”的3张图\n\n"
+        
+        ".pixiv id 12345678\n"
+        "↑ 获取 Pixiv id为“12345678”的图\n\n"
         
         ".pixiv r\n"
         "↑ 获取 Pixiv 日榜中1张图（默认）\n\n"
@@ -67,12 +114,12 @@ async def handle_pixiv_help(bot: Bot, event: MessageEvent):
     await bot.send(event=event, message=help_text)
 
 # 配置项
-REFRESH_TOKEN = "your_token"   # 你的pixiv refresh code
-COOLDOWN_SECONDS = 20   # 用户请求该插件的冷却时间（单位：秒）
-RECALL_SECONDS = 60  # 撤回时间（单位：秒）
+REFRESH_TOKEN = "你的pixiv refresh code"   # 你的pixiv refresh code
+COOLDOWN_SECONDS = 60   # 用户请求该插件的冷却时间（单位：秒）
+RECALL_SECONDS = 30  # 撤回时间（单位：秒）
 CACHE_DIR = os.path.join(os.path.dirname(__file__), "cache", "pixiv_download")  # 缓存文件路径，你的plugins文件夹内需要存在一个路径 /plugins/cache/pixiv_download
 os.makedirs(CACHE_DIR, exist_ok=True)
-NAPCAT_TEMP_DIR = r"your_QQ_NapCat_temp  # 修改为你Napcat本地的临时发送路径
+NAPCAT_TEMP_DIR = r"D:\QQFiles\NapCat\temp"  # 修改为你Napcat本地的临时发送路径
 
 # 初始化 Pixiv API
 api = AppPixivAPI()
@@ -80,30 +127,75 @@ api.auth(refresh_token=REFRESH_TOKEN)
 
 # 冷却记录
 cooldowns = {}
+async def check_cooldown(bot: Bot, event: MessageEvent) -> bool:
+    uid = str(event.user_id)
+    now = time.time()
+    if uid in cooldowns and now - cooldowns[uid] < COOLDOWN_SECONDS:
+        remaining = int(COOLDOWN_SECONDS - (now - cooldowns[uid]))
+        await bot.send(event, f"🕓 阁下的请求还在冷却中，请等待 {remaining} 秒后再试。")
+        return False
+    cooldowns[uid] = now
+    return True
+
 
 import asyncio
 from nonebot import get_driver
 
-async def refresh_access_token():
-    while True:
-        await asyncio.sleep(30 * 60)  # 每 30 分钟刷新一次
-        try:
-            api.auth(refresh_token=REFRESH_TOKEN)
-            print("Access token refreshed successfully.")
-        except Exception as e:
-            print(f"刷新 access token 失败: {e}")
+import json
+
+# ✅ 正确路径：指向 plugins/cache/pixiv_token.json
+# 正确路径：写入 plugins/cache/pixiv_token.json
+PLUGIN_ROOT = os.path.dirname(os.path.abspath(__file__))  # plugins 目录路径
+CACHE_DIR = os.path.join(PLUGIN_ROOT, "cache")
+os.makedirs(CACHE_DIR, exist_ok=True)
+
+TOKEN_PATH = os.path.join(CACHE_DIR, "pixiv_token.json")
+
+if not os.path.exists(TOKEN_PATH):
+    print("[Pixiv插件] token 路径检查：准备创建 plugins/cache/pixiv_token.json")
+
+
+def save_access_token(token: str):
+    try:
+        with open(TOKEN_PATH, "w", encoding="utf-8") as f:
+            json.dump({"access_token": token, "timestamp": int(time.time())}, f)
+        print(f"[Pixiv插件] ✅ access_token 写入成功：{TOKEN_PATH}")
+    except Exception as e:
+        print(f"[Pixiv插件] ❌ access_token 写入失败: {e}")
+
+
+
+def save_access_token(token: str):
+    try:
+        with open(TOKEN_PATH, "w", encoding="utf-8") as f:
+            json.dump({"access_token": token, "timestamp": int(time.time())}, f)
+    except Exception as e:
+        print(f"[Pixiv插件] ❌ access_token 写入失败: {e}")
+
 
 driver = get_driver()
 
+
 @driver.on_startup
 async def on_startup():
-    asyncio.create_task(refresh_access_token())
+    try:
+        api.auth(refresh_token=REFRESH_TOKEN)
+        save_access_token(api.access_token)
+        print("[Pixiv插件] ✅ 启动时 access_token 写入成功")
+    except Exception as e:
+        print(f"[Pixiv插件] ❌ 启动时刷新 token 失败: {e}")
 
 
 # 自定义触发器
 def pixiv_rule(event: MessageEvent) -> bool:
+    if not isinstance(event, GroupMessageEvent):
+        return False
     text = event.get_plaintext().strip().lower()
+    if text.startswith(".pixiv r18"):  # 显式排除 r18
+        return False
     return text.startswith(".pixiv r") or text.startswith(".pixiv u")
+
+
 
 # 注册监听器
 pixiv_handler = on_message(rule=pixiv_rule, priority=1, block=True)
@@ -250,12 +342,15 @@ async def handle_pixiv_user(bot: Bot, event: MessageEvent, text: str):
 
 
 def pixiv_hot_rule(event: MessageEvent) -> bool:
-    return event.get_plaintext().strip().lower().startswith(".pixiv hot")
+    return isinstance(event, GroupMessageEvent) and event.get_plaintext().strip().lower().startswith(".pixiv hot")
+
 
 pixiv_hot = on_message(rule=pixiv_hot_rule, priority=1, block=True)
 
 @pixiv_hot.handle()
 async def handle_pixiv_hot(bot: Bot, event: MessageEvent):
+    if not await check_cooldown(bot, event):
+        return
     text = event.get_plaintext().strip()
     parts = text.split()
     if len(parts) < 3:

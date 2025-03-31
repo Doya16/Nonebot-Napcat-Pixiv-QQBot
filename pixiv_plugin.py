@@ -114,9 +114,9 @@ async def handle_pixiv_help(bot: Bot, event: MessageEvent):
     await bot.send(event=event, message=help_text)
 
 # 配置项
-REFRESH_TOKEN = "r4lOlQ3hTi0X-vzv8y5sY-DzCbJCIpQ-tHffNRM2DJc"   # 你的pixiv refresh code
-COOLDOWN_SECONDS = 60   # 用户请求该插件的冷却时间（单位：秒）
-RECALL_SECONDS = 30  # 撤回时间（单位：秒）
+REFRESH_TOKEN = "你的pixiv refresh code"   # 你的pixiv refresh code
+COOLDOWN_SECONDS = 45   # 用户请求该插件的冷却时间（单位：秒）
+RECALL_SECONDS = 45  # 撤回时间（单位：秒）
 CACHE_DIR = os.path.join(os.path.dirname(__file__), "cache", "pixiv_download")  # 缓存文件路径，你的plugins文件夹内需要存在一个路径 /plugins/cache/pixiv_download
 os.makedirs(CACHE_DIR, exist_ok=True)
 NAPCAT_TEMP_DIR = r"D:\QQFiles\NapCat\temp"  # 修改为你Napcat本地的临时发送路径
@@ -531,3 +531,29 @@ async def periodic_token_refresh():
             print(f"[Pixiv插件] ❌ 定时刷新失败: {e}")
         await asyncio.sleep(25 * 60)  # 每 25 分钟刷新一次
 
+from nonebot import on_message
+from nonebot.adapters.onebot.v11 import PrivateMessageEvent
+from nonebot.adapters.onebot.v11 import MessageSegment
+
+# 当报错时，可私聊手动刷新 access_token 指令（仅管理员）
+
+ADMIN_QQ = 12345678  # ← 改成你自己的 QQ 号
+
+def refresh_rule(event: MessageEvent) -> bool:
+    return isinstance(event, PrivateMessageEvent) and event.get_plaintext().strip().lower() == ".pixiv refresh"
+
+pixiv_refresh = on_message(rule=refresh_rule, priority=1, block=True)
+
+@pixiv_refresh.handle()
+async def _(bot: Bot, event: MessageEvent):
+    if event.user_id != ADMIN_QQ:
+        await bot.send(event, "❌ 你无权刷新 access_token。")
+        return
+
+    try:
+        from pixivpy3 import AppPixivAPI
+        api.auth(refresh_token=REFRESH_TOKEN)
+        save_access_token(api.access_token)
+        await bot.send(event, f"✅ access_token 刷新成功！")
+    except Exception as e:
+        await bot.send(event, f"❌ 刷新失败: {e}")

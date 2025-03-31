@@ -11,19 +11,21 @@ from nonebot import on_message, get_driver
 from nonebot.adapters.onebot.v11 import Bot, MessageEvent, MessageSegment, PrivateMessageEvent
 from pixivpy3 import AppPixivAPI
 
-# ===== 配置 =====
+# 本插件需要配合pixiv群聊插件中获取access code并写入cache的函数运行，无法单独运行
+
+# 配置
 PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
 TOKEN_PATH = os.path.join(PLUGIN_DIR, "cache", "pixiv_token.json")
 CACHE_DIR = os.path.join(PLUGIN_DIR, "cache", "pixiv_download")
 NAPCAT_TEMP_DIR = r"D:\QQFiles\NapCat\temp"
 
-RECALL_SECONDS = 30  # 自动撤回时间
-COOLDOWN_SECONDS = 60  # 冷却时间（秒）
+RECALL_SECONDS = 45  # 自动撤回时间
+COOLDOWN_SECONDS = 45  # 冷却时间（秒）
 cooldowns = {}
 
 os.makedirs(CACHE_DIR, exist_ok=True)
 
-# ===== access_token 读取 =====
+# access_token 读取
 def get_access_token():
     if not os.path.exists(TOKEN_PATH):
         print("[私聊插件] ❌ 暂未找到 access_token 文件")
@@ -36,14 +38,14 @@ def get_access_token():
         print(f"[私聊插件] ❌ 读取 access_token 失败: {e}")
         return None
 
-# ===== Pixiv API 初始化 =====
+# Pixiv API 初始化
 api = AppPixivAPI()
 access_token = get_access_token()
 if access_token:
     api.access_token = access_token
     print("[私聊插件] ✅ access_token 加载成功")
 
-# ===== 通用冷却检查函数 =====
+# 通用冷却检查函数
 async def check_cooldown(bot: Bot, event: MessageEvent) -> bool:
     uid = str(event.user_id)
     now = time.time()
@@ -60,7 +62,7 @@ def refresh_token_from_file():
         api.access_token = token
 
 
-# ===== 帮助指令 =====
+# 帮助指令
 def help_rule(event: MessageEvent):
     return event.get_plaintext().strip().lower() == ".pixiv help"
 
@@ -82,10 +84,11 @@ async def _(bot: Bot, event: MessageEvent):
         ".pixiv hot [关键词] [数量]\n"
         ".pixiv r18 [关键词] [数量]\n"
         ".pixiv r18 [关键词] [day/week/month] [数量]\n"
+        ".pixiv r18开头的命令只会返回tag中带有 R18 的图片\n"
         "\n已开启 R-18 显示，但不支持多图发送。"
     ))
 
-# ===== .pixiv id =====
+# .pixiv id
 def id_rule(event: MessageEvent):
     return event.get_plaintext().strip().lower().startswith(".pixiv id")
 
@@ -114,7 +117,7 @@ async def _(bot: Bot, event: MessageEvent):
     except Exception as e:
         await bot.send(event, f"❌ 获取失败: {e}")
 
-# ===== .pixiv r18 =====
+# .pixiv r18
 def r18_rule(event: MessageEvent):
     return event.get_plaintext().strip().lower().startswith(".pixiv r18")
 
@@ -173,7 +176,7 @@ async def _(bot: Bot, event: MessageEvent):
     except Exception as e:
         await bot.send(event, f"❌ 获取 R-18 插图失败：{e}")
 
-# ===== 图片下载与发送（含自动撤回） =====
+# 图片下载与发送（含自动撤回）
 async def send_images(bot: Bot, event: MessageEvent, illusts: list):
     user_dir = os.path.join(CACHE_DIR, str(event.user_id))
     os.makedirs(user_dir, exist_ok=True)
@@ -414,4 +417,7 @@ async def _(bot: Bot, event: MessageEvent):
 
     except Exception as e:
         await bot.send(event, f"❌ 获取热门插图失败：{e}")
+
+
+
 

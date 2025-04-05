@@ -18,6 +18,16 @@ from nonebot.adapters.onebot.v11 import Bot, MessageEvent
 import uuid
 from nonebot.adapters.onebot.v11 import GroupMessageEvent
 
+# 配置项
+REFRESH_TOKEN = "你的pixiv refresh code"   # 你的pixiv refresh code
+COOLDOWN_SECONDS = 45   # 用户请求该插件的冷却时间（单位：秒）
+RECALL_SECONDS = 45  # 撤回时间（单位：秒）
+CACHE_DIR = os.path.join(os.path.dirname(__file__), "cache", "pixiv_download")  # 缓存文件路径，你的plugins文件夹内需要存在一个路径 /plugins/cache/pixiv_download
+os.makedirs(CACHE_DIR, exist_ok=True)
+NAPCAT_TEMP_DIR = r"D:\QQFiles\NapCat\temp"  # 修改为你Napcat本地的临时发送路径
+# 冷却白名单
+WHITELIST_USERS = {"白名单QQ号"}
+
 def pixiv_help_rule(event: MessageEvent) -> bool:
     return isinstance(event, GroupMessageEvent) and event.get_plaintext().strip().lower() == ".pixiv help"
 
@@ -103,23 +113,26 @@ async def handle_pixiv_help(bot: Bot, event: MessageEvent):
 
         ".pixiv u Nhimm latest 3\n"
         "↑ 获取用户 Nhimm 的最新3张作品\n\n"
+        
+        "🏷️ 多tag获取示例：\n"
+        ".pixiv tag r 百合 黑丝 3\n"
+        "↑ 随机获取关键词为“百合 黑丝”的3张图\n\n"
+
+        ".pixiv tag hot 百合 黑丝 3\n"
+        "↑ 获取关键词为“百合 黑丝”的热门图\n\n"
+
+        ".pixiv tag r 八重神子 百合 雷电将军 week 6\n"
+        "↑ 获取关键词为“八重神子 百合 雷电将军”在 Pixiv 周榜中的6张图\n\n"
+
 
         "📌 补充说明：\n"
         "• 每人请求有冷却限制（默认20秒）\n"
         "• 插件会自动过滤 R-18 / 敏感内容\n"
         "• 插图将在 60 秒后自动撤回（仅限群聊）\n\n"
 
-        "—— Powered by 豆芽 doya16 ✨"
+        "—— Powered by 豆芽doya16 ✨"
     )
     await bot.send(event=event, message=help_text)
-
-# 配置项
-REFRESH_TOKEN = "你的pixiv refresh code"   # 你的pixiv refresh code
-COOLDOWN_SECONDS = 45   # 用户请求该插件的冷却时间（单位：秒）
-RECALL_SECONDS = 45  # 撤回时间（单位：秒）
-CACHE_DIR = os.path.join(os.path.dirname(__file__), "cache", "pixiv_download")  # 缓存文件路径，你的plugins文件夹内需要存在一个路径 /plugins/cache/pixiv_download
-os.makedirs(CACHE_DIR, exist_ok=True)
-NAPCAT_TEMP_DIR = r"D:\QQFiles\NapCat\temp"  # 修改为你Napcat本地的临时发送路径
 
 # 初始化 Pixiv API
 api = AppPixivAPI()
@@ -127,15 +140,22 @@ api.auth(refresh_token=REFRESH_TOKEN)
 
 # 冷却记录
 cooldowns = {}
+
 async def check_cooldown(bot: Bot, event: MessageEvent) -> bool:
     uid = str(event.user_id)
+    if uid in WHITELIST_USERS:
+        await bot.send(event, f"👑 阁下是白名单，已为您跳过冷却机制~ 👑")
+        return True  # 白名单用户跳过冷却检测
+
     now = time.time()
     if uid in cooldowns and now - cooldowns[uid] < COOLDOWN_SECONDS:
         remaining = int(COOLDOWN_SECONDS - (now - cooldowns[uid]))
         await bot.send(event, f"🕓 阁下的请求还在冷却中，请等待 {remaining} 秒后再试。")
         return False
+
     cooldowns[uid] = now
     return True
+
 
 
 import asyncio
@@ -535,9 +555,9 @@ from nonebot import on_message
 from nonebot.adapters.onebot.v11 import PrivateMessageEvent
 from nonebot.adapters.onebot.v11 import MessageSegment
 
-# 当报错时，可私聊手动刷新 access_token 指令（仅管理员）
+# ===== 手动刷新 access_token 指令（仅管理员） =====
 
-ADMIN_QQ = 12345678  # ← 改成你自己的 QQ 号
+ADMIN_QQ = 1561867163  # ← 改成你自己的 QQ 号
 
 def refresh_rule(event: MessageEvent) -> bool:
     return isinstance(event, PrivateMessageEvent) and event.get_plaintext().strip().lower() == ".pixiv refresh"
@@ -557,3 +577,78 @@ async def _(bot: Bot, event: MessageEvent):
         await bot.send(event, f"✅ access_token 刷新成功！")
     except Exception as e:
         await bot.send(event, f"❌ 刷新失败: {e}")
+
+# 新增tag搜索
+def pixiv_tag_rule(event: MessageEvent) -> bool:
+    return isinstance(event, GroupMessageEvent) and event.get_plaintext().strip().lower().startswith(".pixiv tag")
+
+pixiv_tag = on_message(rule=pixiv_tag_rule, priority=1, block=True)
+
+
+@pixiv_tag.handle()
+async def handle_pixiv_tag(bot: Bot, event: MessageEvent):
+    if not await check_cooldown(bot, event):
+        return
+
+    text = event.get_plaintext().strip()
+    parts = text.split()
+
+    if len(parts) < 3:
+        await bot.send(event=event,
+                       message="❗ 格式错误，应为 `.pixiv tag [hot/r] [关键词...] [可选: week/month/day] [数量]`")
+        return
+
+    search_type = parts[2].lower()
+    valid_modes = {"day", "week", "month"}
+    mode = None
+    num = 1
+    tag_parts = []
+
+    for part in parts[3:]:
+        lower_part = part.lower()
+        if lower_part in valid_modes:
+            mode = lower_part
+        elif part.isdigit():
+            num = min(int(part), 6)
+        else:
+            tag_parts.append(part)
+
+    tag = " ".join(tag_parts)
+
+    if not tag:
+        await bot.send(event=event, message="❗ 请输入关键词")
+        return
+
+    try:
+        if search_type == "hot":
+            # 热门排序：partial_match + popular_desc
+            res = api.search_illust(tag, search_target="partial_match_for_tags", sort="popular_desc")
+        elif search_type == "r":
+            # 随机获取（按时间排序）
+            res = api.search_illust(tag, search_target="partial_match_for_tags", sort="date_desc")
+        else:
+            await bot.send(event=event, message="❗ 类型仅支持 `hot` 或 `r`")
+            return
+
+        illusts = []
+        max_pages = 10
+        pages = 0
+
+        while res and res.illusts and pages < max_pages:
+            illusts.extend([i for i in res.illusts if not is_sensitive(i)])
+            if res.next_url:
+                res = api.search_illust(**api.parse_qs(res.next_url))
+            else:
+                break
+            pages += 1
+
+        if not illusts:
+            await bot.send(event=event, message="⚠️ 没有找到符合条件的插图")
+            return
+
+        selected = random.sample(illusts, min(num, len(illusts)))
+        await send_images(bot, event, str(event.user_id), selected)
+
+    except Exception as e:
+        print(f"[Pixiv插件] ❌ tag 搜索异常：{e}")
+        await bot.send(event=event, message=f"❌ tag 搜索失败：{e}")

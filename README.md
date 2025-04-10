@@ -106,7 +106,33 @@ plugins/cache/pixiv_token.json
 
 ---
 
-# 💬 六、全部命令一览
+# 🔧 六、用户需自行定义的变量及位置
+
+在使用本插件前，建议根据你的实际环境修改以下配置变量。
+
+| 变量名              | 所在文件                     | 示例值 / 默认值                                  | 描述 |
+|---------------------|------------------------------|--------------------------------------------------|------|
+| `REFRESH_TOKEN`      | `pixiv_plugin.py`            | `"r4lOlQ3hTi0X-..."`                              | Pixiv 的 refresh_token，用于 API 登录 |
+| `COOLDOWN_SECONDS`   | 群聊 + 私聊插件              | `45` 或 `60`                                     | 插件命令冷却时间，单位：秒 |
+| `RECALL_SECONDS`     | 群聊 + 私聊插件              | `45` 或 `60`                                     | 插图发送后的自动撤回时间 |
+| `NAPCAT_TEMP_DIR`    | 群聊 + 私聊插件              | `r"D:\QQFiles\NapCat\temp"`                   | Napcat 临时图片目录，请根据实际路径修改 |
+| `CACHE_DIR`          | 群聊 + 私聊插件              | `plugins/cache/pixiv_download/`                  | 插图缓存路径（自动创建） |
+| `TOKEN_PATH`         | 群聊 + 私聊插件              | `plugins/cache/pixiv_token.json`                 | access_token 缓存路径（自动生成） |
+| `ADMIN_QQ`           | `pixiv_plugin.py`            | `1234567890`                                     | 允许使用 `.pixiv refresh` 指令的管理员 QQ |
+| `WHITELIST_USERS`    | `pixiv_plugin.py`            | `{"1234567890"}`                                 | 可跳过冷却时间的白名单用户 QQ 号集合 |
+
+💡 建议你使用 `.env` 文件来存储 `REFRESH_TOKEN`，实现统一管理。例如：
+
+```env
+PIXIV_REFRESH_TOKEN=你的token字符串
+```
+不过即便不使用，插件本身也自带管理逻辑。
+
+---
+
+所有路径如不存在会自动创建。插件首次运行后也会自动刷新 token 并写入 `pixiv_token.json`。
+
+# 💬 七、全部命令一览
 
 ## 🧠 多关键词 tag 搜索（新功能，仅群聊）
 
@@ -154,7 +180,7 @@ plugins/cache/pixiv_token.json
 
 ---
 
-# 📂 七、路径说明
+# 📂 八、路径说明
 
 | 项目 | 默认路径 |
 |------|-----------|
@@ -164,7 +190,7 @@ plugins/cache/pixiv_token.json
 
 ---
 
-# ⏱️ 八、冷却与撤回说明
+# ⏱️ 九、冷却与撤回说明
 
 - 每位用户请求冷却时间：`60秒`（可修改 `COOLDOWN_SECONDS`）
 - 插图发送后自动撤回时间：`群聊 60 秒 / 私聊 30 秒`
@@ -172,13 +198,13 @@ plugins/cache/pixiv_token.json
 
 ---
 
-# 🪪 九、开源协议
+# 🪪 十、开源协议
 
 MIT License
 
 ---
 
-# 🙏 十、致谢
+# 🙏 十一、致谢
 
 - [NoneBot2](https://github.com/nonebot/nonebot2)
 - [PixivPy](https://github.com/upbit/pixivpy)

@@ -13,6 +13,10 @@
 
 ![群聊演示](demo/GroupDemo.png)
 
+### 📍 群聊标签效果
+
+![群聊演示](demo/GroupTagDemo.png)
+
 ### 📍 私聊效果
 
 ![私聊演示](demo/PrivateDemo.png)
@@ -26,18 +30,18 @@
 # 🧩 一、功能特性
 
 - 支持多关键词 tag 搜索 `.pixiv tag`（含排行榜筛选）
-- 支持白名单机制，白名单用户不受冷却限制
-
-
 - 支持 Pixiv 排行榜（日 / 周 / 月）插图获取
 - 支持关键词插图搜索（含普通与热门图池）
 - 支持指定用户作品（latest / random 模式）
 - 支持通过 ID 查询插图
-- 私聊支持获取 R-18 插图
+- 私聊支持获取 R-18 插图（并检测 tag 中是否包含 R-18 标签）
 - 插图缓存至本地并经 Napcat 临时路径中转
-- 自动过滤暴力、血腥等敏感内容
+- 自动过滤暴力、血腥、触手、Guro 等敏感内容（通过 `is_sensitive` 函数）
 - 群聊支持自动撤回（默认 60 秒），私聊 30 秒
 - 全局冷却时间限制（默认 60 秒）
+- 支持白名单机制，白名单用户不受冷却限制
+- access_token 自动刷新，每 25 分钟刷新一次
+- 插件支持 token 本地持久化缓存至 `pixiv_token.json`
 
 ---
 
@@ -67,13 +71,13 @@ pip install pixivpy3 httpx
 - 群聊版插件：`plugins/pixiv_plugin.py`
 - 私聊版插件：`plugins/pixiv_plugin_private.py`
 
-确保 Napcat 正常运行，并正确配置其临时图片目录。
+确保 Napcat 正常运行，并正确配置其临时图片目录 `NAPCAT_TEMP_DIR`。
 
 ---
 
 # 🔐 四、Pixiv Token 获取
 
-1. 运行授权脚本：
+1. 运行授权脚本（参考 pixivpy3 文档）：
 ```bash
 python pixiv_auth.py login
 ```
@@ -86,9 +90,9 @@ python pixiv_auth.py login
 
 # 📁 五、Token 配置
 
-### 推荐方式：`.env` 文件
+推荐方式：`.env` 文件
 
-```
+```env
 PIXIV_REFRESH_TOKEN=你的refresh_token
 ```
 
@@ -103,7 +107,8 @@ plugins/cache/pixiv_token.json
 ---
 
 # 💬 六、全部命令一览
-## 🧠 多关键词 tag 搜索（新功能）
+
+## 🧠 多关键词 tag 搜索（新功能，仅群聊）
 
 | 命令 | 说明 |
 |------|------|
@@ -151,20 +156,19 @@ plugins/cache/pixiv_token.json
 
 # 📂 七、路径说明
 
-- 插图缓存：`plugins/cache/pixiv_download/`
-- access_token 保存：`plugins/cache/pixiv_token.json`
-- 临时发送目录（需手动配置）：`NAPCAT_TEMP_DIR = "你的 Napcat 路径"`
+| 项目 | 默认路径 |
+|------|-----------|
+| 插图缓存 | `plugins/cache/pixiv_download/` |
+| access_token 保存 | `plugins/cache/pixiv_token.json` |
+| 临时图片路径 | `NAPCAT_TEMP_DIR`（请手动配置为 Napcat temp 目录） |
 
 ---
 
 # ⏱️ 八、冷却与撤回说明
 
-
-- 支持白名单用户跳过冷却（配置在代码内 `WHITELIST_USERS`）
-
-
-- 每位用户请求冷却时间：`60秒`（群聊/私聊一致）
-- 插图发送后自动撤回：`群聊 60 秒 / 私聊 30 秒`
+- 每位用户请求冷却时间：`60秒`（可修改 `COOLDOWN_SECONDS`）
+- 插图发送后自动撤回时间：`群聊 60 秒 / 私聊 30 秒`
+- 支持白名单用户跳过冷却（配置在 `WHITELIST_USERS` 中）
 
 ---
 

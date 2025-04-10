@@ -18,16 +18,6 @@ from nonebot.adapters.onebot.v11 import Bot, MessageEvent
 import uuid
 from nonebot.adapters.onebot.v11 import GroupMessageEvent
 
-# 配置项
-REFRESH_TOKEN = "你的pixiv refresh code"   # 你的pixiv refresh code
-COOLDOWN_SECONDS = 45   # 用户请求该插件的冷却时间（单位：秒）
-RECALL_SECONDS = 45  # 撤回时间（单位：秒）
-CACHE_DIR = os.path.join(os.path.dirname(__file__), "cache", "pixiv_download")  # 缓存文件路径，你的plugins文件夹内需要存在一个路径 /plugins/cache/pixiv_download
-os.makedirs(CACHE_DIR, exist_ok=True)
-NAPCAT_TEMP_DIR = r"D:\QQFiles\NapCat\temp"  # 修改为你Napcat本地的临时发送路径
-# 冷却白名单
-WHITELIST_USERS = {"白名单QQ号"}
-
 def pixiv_help_rule(event: MessageEvent) -> bool:
     return isinstance(event, GroupMessageEvent) and event.get_plaintext().strip().lower() == ".pixiv help"
 
@@ -77,6 +67,7 @@ async def handle_pixiv_id(bot: Bot, event: MessageEvent):
         await bot.send(event=event, message=f"❌ 获取插图失败：{e}")
 
 
+# 使用说明文案嵌入
 @pixiv_help.handle()
 async def handle_pixiv_help(bot: Bot, event: MessageEvent):
     help_text = (
@@ -130,9 +121,17 @@ async def handle_pixiv_help(bot: Bot, event: MessageEvent):
         "• 插件会自动过滤 R-18 / 敏感内容\n"
         "• 插图将在 60 秒后自动撤回（仅限群聊）\n\n"
 
-        "—— Powered by 豆芽doya16 ✨"
+        "—— Powered by 豆芽 doya16 ✨"
     )
     await bot.send(event=event, message=help_text)
+
+# 配置项
+REFRESH_TOKEN = "你的pixiv refresh code"   # 你的pixiv refresh code
+COOLDOWN_SECONDS = 45   # 用户请求该插件的冷却时间（单位：秒）
+RECALL_SECONDS = 45  # 撤回时间（单位：秒）
+CACHE_DIR = os.path.join(os.path.dirname(__file__), "cache", "pixiv_download")  # 缓存文件路径，你的plugins文件夹内需要存在一个路径 /plugins/cache/pixiv_download
+os.makedirs(CACHE_DIR, exist_ok=True)
+NAPCAT_TEMP_DIR = r"D:\QQFiles\NapCat\temp"  # 修改为你Napcat本地的临时发送路径
 
 # 初始化 Pixiv API
 api = AppPixivAPI()
@@ -140,7 +139,8 @@ api.auth(refresh_token=REFRESH_TOKEN)
 
 # 冷却记录
 cooldowns = {}
-
+# 白名单QQ号（无请求CD）
+WHITELIST_USERS = {"白名单QQ号"}
 async def check_cooldown(bot: Bot, event: MessageEvent) -> bool:
     uid = str(event.user_id)
     if uid in WHITELIST_USERS:
@@ -160,10 +160,8 @@ async def check_cooldown(bot: Bot, event: MessageEvent) -> bool:
 
 import asyncio
 from nonebot import get_driver
-
 import json
 
-# ✅ 正确路径：指向 plugins/cache/pixiv_token.json
 # 正确路径：写入 plugins/cache/pixiv_token.json
 PLUGIN_ROOT = os.path.dirname(os.path.abspath(__file__))  # plugins 目录路径
 CACHE_DIR = os.path.join(PLUGIN_ROOT, "cache")
@@ -395,13 +393,12 @@ async def handle_pixiv_hot(bot: Bot, event: MessageEvent):
         print(f"[Pixiv插件] ❌ 热门插图获取异常：{e}")
         await bot.send(event=event, message=f"❌ 热门插图获取失败：{e}")
 
-
-# 图片下载与发送
 # 图片下载与发送
 async def send_images(bot: Bot, event: MessageEvent, user_id: str, illusts: list):
     user_dir = os.path.join(CACHE_DIR, user_id)
     os.makedirs(user_dir, exist_ok=True)
 
+    # 最大重试次数和重试cd
     max_retry = 5
     retry_delay = 1
     sent_temp_paths = []  # 记录已复制到 NapCat 的路径
@@ -555,9 +552,8 @@ from nonebot import on_message
 from nonebot.adapters.onebot.v11 import PrivateMessageEvent
 from nonebot.adapters.onebot.v11 import MessageSegment
 
-# ===== 手动刷新 access_token 指令（仅管理员） =====
-
-ADMIN_QQ = 1561867163  # ← 改成你自己的 QQ 号
+# 手动刷新 access_token 指令（仅管理员）
+ADMIN_QQ = 改成你自己的 QQ 号  # ← 改成你自己的 QQ 号
 
 def refresh_rule(event: MessageEvent) -> bool:
     return isinstance(event, PrivateMessageEvent) and event.get_plaintext().strip().lower() == ".pixiv refresh"

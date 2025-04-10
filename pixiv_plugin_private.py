@@ -11,8 +11,6 @@ from nonebot import on_message, get_driver
 from nonebot.adapters.onebot.v11 import Bot, MessageEvent, MessageSegment, PrivateMessageEvent
 from pixivpy3 import AppPixivAPI
 
-# 本插件需要配合pixiv群聊插件中获取access code并写入cache的函数运行，无法单独运行
-
 # 配置
 PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
 TOKEN_PATH = os.path.join(PLUGIN_DIR, "cache", "pixiv_token.json")
@@ -25,7 +23,8 @@ cooldowns = {}
 
 os.makedirs(CACHE_DIR, exist_ok=True)
 
-# access_token 读取
+# access_token 读取必须配合群聊插件使用
+# 本私聊插件只是阅读群聊插件生成的access token
 def get_access_token():
     if not os.path.exists(TOKEN_PATH):
         print("[私聊插件] ❌ 暂未找到 access_token 文件")
@@ -71,6 +70,7 @@ def help_private_rule(event: MessageEvent) -> bool:
 
 pixiv_help = on_message(rule=help_private_rule, priority=1, block=True)
 
+# 使用说明文案嵌入
 @pixiv_help.handle()
 async def _(bot: Bot, event: MessageEvent):
     if not await check_cooldown(bot, event):
@@ -88,7 +88,7 @@ async def _(bot: Bot, event: MessageEvent):
         "\n已开启 R-18 显示，但不支持多图发送。"
     ))
 
-# .pixiv id
+# .pixiv id命令的实现
 def id_rule(event: MessageEvent):
     return event.get_plaintext().strip().lower().startswith(".pixiv id")
 
@@ -117,7 +117,7 @@ async def _(bot: Bot, event: MessageEvent):
     except Exception as e:
         await bot.send(event, f"❌ 获取失败: {e}")
 
-# .pixiv r18
+# .pixiv r18命令的实现
 def r18_rule(event: MessageEvent):
     return event.get_plaintext().strip().lower().startswith(".pixiv r18")
 
@@ -417,7 +417,3 @@ async def _(bot: Bot, event: MessageEvent):
 
     except Exception as e:
         await bot.send(event, f"❌ 获取热门插图失败：{e}")
-
-
-
-
